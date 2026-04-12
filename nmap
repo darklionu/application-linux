@@ -1,0 +1,22 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h> 
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <errno.h>
+
+int scan_de_port(char *ip, int port){
+    int sock;
+    struct sockaddr_in target;
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    
+    
+}
