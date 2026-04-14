@@ -1,6 +1,0 @@
-#ifndef AGENT_H
-#define AGENT_H
-
-#define MAX_TECHNIQUES  20
-#define MAX_LEVEL       10
-#define NAME_LEN        64
