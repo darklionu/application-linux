@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Script de démonstration du Bot Gestionnaire Agent
+# Script de démonstration de l'Agent Manager
 
 echo "╔═════════════════════════════════════════════════════╗"
-echo "║     DÉMO - Bot Gestionnaire Agent v1.0              ║"
+echo "║     DÉMO - Agent Manager v1.0                       ║"
 echo "╚═════════════════════════════════════════════════════╝"
 echo ""
 
-# Vérifier le répertoire
-if [ ! -f "bot_gestionnaire" ]; then
-    echo "[!] Erreur: bot_gestionnaire non compilé!"
+# Vérifier le binaire
+if [ ! -f "agent_manager" ]; then
+    echo "[!] Erreur: agent_manager non compilé!"
     echo "[*] Exécutez: make"
     exit 1
 fi
@@ -26,4 +26,4 @@ echo "Démarrage du programme..."
 echo "══════════════════════════════════════════════════════"
 echo ""
 
-./bot_gestionnaire
+./agent_manager

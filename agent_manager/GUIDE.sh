@@ -1,5 +1,5 @@
 #!/bin/bash
-# 🚀 GUIDE DE DÉMARRAGE RAPIDE - Bot Gestionnaire Agent
+# 🚀 GUIDE DE DÉMARRAGE RAPIDE - Agent Manager
 
 echo "╔════════════════════════════════════════════════════════╗"
 echo "║            GUIDE DE DÉMARRAGE RAPIDE                  ║"
@@ -13,7 +13,7 @@ cat << 'EOF'
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Se placer dans le répertoire:
-   $ cd "bot gestionnaire"
+   $ cd "agent_manager"
 
 2. Compiler le projet:
    $ make                    # Compile uniquement
@@ -21,8 +21,8 @@ cat << 'EOF'
    $ make rebuild            # Nettoie + recompile
 
 3. Exécuter:
-   $ ./bot_gestionnaire      # Lancement manuel
-   $ ./demo.sh               # Démonstration interactive
+   $ ./agent_manager      # Lancement manuel
+   $ ./demo.sh           # Démonstration interactive
 
 
 🎮 UTILISATION
@@ -66,9 +66,7 @@ Pour une progression autonome:
 📊 COMPRENDRE LE STATUT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Niveau:    1-20 (augmente avec l'XP)
-XP:        Expérience actuelle / XP pour prochain niveau
-Furtivité: 0-100% (baisse si détecté, augmente en succès)
+Furtivité: 0-100% (baisse si détecté)
 Outils:    [X] = activé, [ ] = désactivé
 
 
@@ -86,9 +84,9 @@ Outils:    [X] = activé, [ ] = désactivé
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 agent.h:        Structures et constantes
-agent.c:        Logique de l'agent
-technique.c:    Gestion des techniques et outils
-main.c:         Interface utilisateur
+agent_core.c:   Logique de l'agent
+tool_loader.c:  Gestion des techniques et outils
+manager.c:      Interface utilisateur
 Makefile:       Compilation
 
 Le programme détecte automatiquement:
@@ -111,7 +109,7 @@ Le programme détecte automatiquement:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Q: Une technique est grise/indisponible?
-R: Vous n'avez pas atteint le niveau requis.
+R: Vérifiez que l'outil requis est activé dans le menu.
 
 Q: Aucun outil détecté?
 R: Vérifiez que le dossier ../tools/ existe.
@@ -119,14 +117,14 @@ R: Vérifiez que le dossier ../tools/ existe.
 Q: La compilation échoue?
 R: Utilisez: make clean && make
 
-Q: Comment changer le nombre de niveaux?
-R: Modifiez MAX_LEVEL dans agent.h
+Q: Comment modifier les techniques disponibles?
+R: Changez les entrées dans tool_loader.c
 
 
 🎯 EXEMPLE D'UTILISATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-$ ./bot_gestionnaire
+$ ./agent_manager
 [Affiche le menu]
 > 1          [Voir le statut actuel]
 > 3          [Gérer les outils]
@@ -135,7 +133,7 @@ $ ./bot_gestionnaire
 > 3          [Retour au menu]
 > 2          [Exécuter une technique]
 > 1          [Exécuter "Ping Test"]
-[Succès! +XP]
+[Succès!]
 > 4          [Mode automatique]
 > 50         [50 itérations]
 [L'agent progresse...]

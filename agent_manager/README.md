@@ -1,15 +1,15 @@
-# 🛡️ Bot Gestionnaire Agent - Documentation
+# 🛡️ Agent Manager - Documentation
 
 ## Présentation
 
-Le **Bot Gestionnaire Agent** est un système d'évolution autonome et adaptative pour un agent red team. L'agent gagne de l'expérience, débloque de nouvelles techniques, et peut évoluer automatiquement selon les demandes de l'utilisateur.
+Le **Agent Manager** est un contrôleur d'outils pour une red team. Il détecte les outils disponibles, gère leur activation et exécute des techniques sans système d'expérience ni niveaux.
 
 ## Fonctionnalités
 
-### 1. **Système d'Expérience Adaptatif**
-- L'XP requise pour monter de niveau s'adapte progressivement
-- Bonus d'XP croissant avec le niveau de l'agent
-- Bonifications par phase d'attaque
+### 1. **Gestion d'Outils et Techniques**
+- Détection automatique des outils dans le dossier `../tools/`
+- Activation/désactivation des outils disponibles
+- Exécution de techniques associées aux outils
 
 ### 2. **Gestion des Outils Système**
 - Détection automatique des outils dans le dossier `../tools/`
@@ -29,11 +29,11 @@ Le **Bot Gestionnaire Agent** est un système d'évolution autonome et adaptativ
 ## Structure des Fichiers
 
 ```
-bot gestionnaire/
+agent_manager/
 ├── agent.h          # En-têtes et structures
-├── agent.c          # Logique de l'agent
-├── technique.c      # Gestion des techniques et outils
-├── main.c           # Interface utilisateur et menu
+├── agent_core.c     # Logique de l'agent
+├── tool_loader.c    # Gestion des techniques et outils
+├── manager.c        # Interface utilisateur et menu
 ├── Makefile         # Configuration de compilation
 └── README.md        # Documentation
 ```
@@ -41,7 +41,7 @@ bot gestionnaire/
 ## Compilation
 
 ```bash
-cd "bot gestionnaire"
+cd "agent_manager"
 make              # Compilation
 make run          # Compilation et exécution
 make rebuild      # Nettoyage + recompilation
@@ -52,10 +52,10 @@ make rebuild      # Nettoyage + recompilation
 ### Menu Principal
 
 ```
-1. Afficher le statut      - Voir niveau, XP, furtivité, outils
+1. Afficher le statut      - Voir furtivité, outils et techniques
 2. Exécuter une technique  - Choisir et lancer une attaque
 3. Gérer les outils        - Activer/désactiver les outils système
-4. Mode automatique        - Évolution continue
+4. Mode automatique        - Exécution automatique de techniques
 5. Afficher techniques     - Liste complète des attaques disponibles
 6. Sauvegarder l'agent     - Exporter la progression
 0. Quitter
@@ -83,10 +83,10 @@ L'agent évolue seul sans interaction :
 
 ## Système de Progression
 
-### Niveaux et Expérience
-- **Niveau 1-10** : Progression classique
-- **Bonus adaptatif** : Plus de XP avec les niveaux élevés
-- **Réduction progressive** : La difficulté s'adapte après le niveau 3
+### Progression
+- Pas de système d'XP ni de niveaux
+- Toutes les techniques sont disponibles immédiatement
+- La réussite dépend de l'outil activé et du taux de succès de la technique
 
 ### Techniques Disponibles
 - Reconnaissance (nmap)
@@ -107,13 +107,13 @@ L'agent évolue seul sans interaction :
 ✅ **Système d'Outils** : Intégration des outils système
 ✅ **Mode Automatique** : Progression sans intervention
 ✅ **Interface Améliorée** : Menus et affichages clairs
-✅ **XP Dynamique** : Récompenses basées sur le niveau et la phase
+✅ **Gestion d'outils** : Activation et usage des outils détectés
 ✅ **Sauvegarde** : Persistance de la progression
 
 ## Développement Futur
 
 - [ ] Système de missions spécifiques
 - [ ] Réseau de cibles multiples
-- [ ] Partageage d'expérience entre agents
+- [ ] Partage de techniques entre agents
 - [ ] Apprentissage machine local
 - [ ] Interface graphique
