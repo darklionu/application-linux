@@ -3,7 +3,6 @@
 
 #define MAX_TECHNIQUES  50
 #define MAX_TOOLS       20
-#define MAX_LEVEL       20
 #define NAME_LEN        64
 #define PATH_LEN        256
 
@@ -42,8 +41,6 @@ typedef struct {
     char        name[NAME_LEN];
     char        tool_name[NAME_LEN];  // outil associé
     Phase       phase;
-    int         min_level;
-    int         xp_reward;
     int         success_rate;
     int         unlocked;
 } Technique;
@@ -51,9 +48,6 @@ typedef struct {
 // L'agent red team
 typedef struct {
     char        name[NAME_LEN];
-    int         level;
-    int         experience;
-    int         exp_to_next;
     int         stealth;
     int         techniques_count;
     int         tools_count;

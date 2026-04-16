@@ -63,8 +63,6 @@ int load_techniques_from_file(const char *filename) {
         strncpy(t->name, token, NAME_LEN - 1);
         strncpy(t->tool_name, (token = strtok(NULL, "|")) ? token : "", NAME_LEN - 1);
         t->phase = atoi((token = strtok(NULL, "|")) ? token : "0");
-        t->min_level = atoi((token = strtok(NULL, "|")) ? token : "1");
-        t->xp_reward = atoi((token = strtok(NULL, "|")) ? token : "10");
         t->success_rate = atoi((token = strtok(NULL, "|")) ? token : "75");
         t->unlocked = 0;
 
@@ -80,19 +78,20 @@ void create_default_techniques() {
     techniques_count = 0;
     
     Technique defaults[] = {
-        { "Ping Test",           "nmap",    PHASE_RECON,    1, 15,  90, 0 },
-        { "DNS Lookup",          "nmap",    PHASE_RECON,    1, 20,  85, 0 },
-        { "Port Enumeration",    "nmap",    PHASE_SCAN,     2, 25,  80, 0 },
-        { "Service Scan",        "nmap",    PHASE_SCAN,     2, 30,  75, 0 },
-        { "Credential Crack",    "john",    PHASE_EXPLOIT,  3, 50,  45, 0 },
-        { "Hash Brute Force",    "john",    PHASE_EXPLOIT,  3, 60,  40, 0 },
-        { "Banner Grab",         "nmap",    PHASE_SCAN,     2, 20,  80, 0 },
-        { "Vulnerability Scan",  "nmap",    PHASE_EXPLOIT,  4, 70,  55, 0 },
-        { "Custom Attack",       "hdra",    PHASE_EXPLOIT,  5, 100, 30, 0 },
-        { "Network Recon",       "nmap",    PHASE_RECON,    1, 25,  95, 0 },
+        { "Ping Test",           "nmap",    PHASE_RECON,    90,  0 },
+        { "DNS Lookup",          "nmap",    PHASE_RECON,    85,  0 },
+        { "Port Enumeration",    "nmap",    PHASE_SCAN,     80,  0 },
+        { "Service Scan",        "nmap",    PHASE_SCAN,     75,  0 },
+        { "Credential Crack",    "john",    PHASE_EXPLOIT,  45,  0 },
+        { "Hash Brute Force",    "john",    PHASE_EXPLOIT,  40,  0 },
+        { "Banner Grab",         "nmap",    PHASE_SCAN,     80,  0 },
+        { "Vulnerability Scan",  "nmap",    PHASE_EXPLOIT,  55,  0 },
+        { "Custom Attack",       "hdra",    PHASE_EXPLOIT,  30,  0 },
+        { "System Audit",        "outils",  PHASE_RECON,    70,  0 },
+        { "Network Recon",       "nmap",    PHASE_RECON,    95,  0 },
     };
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < (int)(sizeof(defaults) / sizeof(defaults[0])); i++) {
         all_techniques[i] = defaults[i];
         techniques_count++;
     }

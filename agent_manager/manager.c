@@ -10,8 +10,8 @@ extern int techniques_count;
 void show_welcome() {
     printf("\n");
     printf("╔═══════════════════════════════════════════╗\n");
-    printf("║        🛡️  BOT GESTIONNAIRE AGENT 🛡️       ║\n");
-    printf("║         Red Team Autonomous System        ║\n");
+    printf("║        🛡️  AGENT MANAGER 🛡️                ║\n");
+    printf("║       Red Team Tool Controller           ║\n");
     printf("╚═══════════════════════════════════════════╝\n\n");
 }
 
@@ -63,10 +63,9 @@ void execute_technique_menu(Agent *a) {
     printf("\n=== TECHNIQUES DISPONIBLES ===\n");
     
     for (int i = 0; i < a->techniques_count; i++) {
-        printf("[%d] %s (Nécessite niveau %d)\n",
+        printf("[%d] %s\n",
                i + 1,
-               a->techniques[i].name,
-               a->techniques[i].min_level);
+               a->techniques[i].name);
     }
 
     printf("\nChoisissez une technique (-1 pour quitter): ");
@@ -91,12 +90,12 @@ void show_all_techniques() {
     };
 
     for (int i = 0; i < techniques_count; i++) {
-        printf("[%d] %-30s | Phase: %-18s | Niveau: %d | XP: %d\n",
+        printf("[%d] %-30s | Phase: %-18s | Outil: %-10s | Succès: %d%%\n",
                i + 1,
                all_techniques[i].name,
                phase_names[all_techniques[i].phase],
-               all_techniques[i].min_level,
-               all_techniques[i].xp_reward);
+               all_techniques[i].tool_name,
+               all_techniques[i].success_rate);
     }
 }
 

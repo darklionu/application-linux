@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -O2
 LDFLAGS = -lm
 
-TARGET = bot_gestionnaire
-SRCS = main.c agent.c technique.c
+TARGET = agent_manager
+SRCS = manager.c agent_core.c tool_loader.c
 OBJS = $(SRCS:.c=.o)
 HEADERS = agent.h
 

