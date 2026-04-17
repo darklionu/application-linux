@@ -1,0 +1,126 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║         STRUCTURE - INTERFACE GRAPHIQUE (GUI)                       ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+gui/
+│
+├── 📂 include/               ← EN-TÊTES (Classes et interfaces)
+│   ├── gui_window.h         • Fenêtre principale (à implémenter)
+│   ├── gui_agent_panel.h    • Gestion des panneaux d'agents ✅
+│   └── gui_button.h         • Classe pour les boutons ✅
+│
+├── 📂 src/                  ← IMPLÉMENTATION (Code source)
+│   ├── simple_gui.cpp       • Exemple simple (non-graphique)
+│   ├── gui_agent_panel.cpp  • Implémentation panels ✅
+│   ├── gui_button.cpp       • Implémentation boutons ✅
+│   └── main_gui_example.cpp • Exemple d'utilisation
+│
+├── 📂 assets/               ← RESSOURCES (Images, icônes, fonts)
+│   ├── images/              (à ajouter)
+│   ├── icons/               (à ajouter)
+│   └── fonts/               (à ajouter)
+│
+├── 📂 build/                ← FICHIERS COMPILÉS
+│   ├── *.o (fichiers objets)
+│   └── gui_app (exécutable final)
+│
+├── 📄 libgui.a              ← BIBLIOTHÈQUE STATIQUE ✅
+│
+├── 🔨 Makefile              ← BUILD SYSTEM
+│   Cibles:
+│   - make all     : Compiler
+│   - make clean   : Nettoyer
+│   - make help    : Aide
+│
+├── ⚙️  config.ini            ← CONFIGURATION
+│   • Framework à utiliser
+│   • Dimensions de fenêtre
+│   • Couleurs (thème)
+│   • Layout des panneaux
+│
+├── 🚀 setup.sh              ← SCRIPT D'INSTALLATION
+│   • Vérifie dépendances
+│   • Installe SFML/Qt
+│   • Compile la lib
+│
+├── 📖 README.md             ← DOCUMENTATION COMPLÈTE
+│   • Architecture
+│   • Composants
+│   • Ressources
+│
+└── 📝 DÉMARRAGE.md          ← GUIDE DE DÉMARRAGE ← LIRE D'ABORD!
+    • 3 étapes pour commencer
+    • Choix du framework
+    • Code d'exemple
+
+═══════════════════════════════════════════════════════════════════════
+
+🎯 POINTS D'ENTRÉE
+
+Pour bien démarrer, lisez dans cet ordre:
+
+1. DÉMARRAGE.md      ← Commencez par ceci!
+2. README.md         ← Architecture et détails
+3. config.ini        ← Personnalisation
+4. include/*.h       ← Interfaces disponibles
+5. Makefile          ← Comment compiler
+
+═══════════════════════════════════════════════════════════════════════
+
+🛠️  FRAMEWORKS GRAPHIQUES DISPONIBLES
+
+┌─────────┬──────────────┬──────────────┬─────────────────────┐
+│Framework│ Installation │ Complexité   │ Recommandation      │
+├─────────┼──────────────┼──────────────┼─────────────────────┤
+│ SFML    │ apt install  │ Simple ⭐⭐⭐│ ✅ Commencer par ça │
+│ Qt5     │ apt install  │ Complet ⭐⭐ │ Si besoin avancé    │
+│ GTK3    │ apt install  │ Moyen ⭐⭐⭐ │ Standard Linux      │
+│ ImGui   │ Build        │ Légère ⭐⭐⭐│ Pour UI immédiate   │
+└─────────┴──────────────┴──────────────┴─────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+
+📊 ÉTAT ACTUEL
+
+✅ Structure créée
+✅ Classes d'exemple
+✅ Bibliothèque compilée (libgui.a)
+⚠️  GUI window à implémenter
+⚠️  Rendu graphique à ajouter
+⚠️  Événements à gérer
+⚠️  Logs en temps réel à ajouter
+
+═══════════════════════════════════════════════════════════════════════
+
+🚀 COMMANDES RAPIDES
+
+Compiler:
+  cd gui && make all
+
+Nettoyer:
+  cd gui && make clean
+
+Setup:
+  ./gui/setup.sh
+
+Compiler un exemple:
+  cd gui/src
+  g++ -std=c++17 -I../include main_gui_example.cpp \
+      gui_agent_panel.cpp gui_button.cpp -o example
+
+═══════════════════════════════════════════════════════════════════════
+
+💡 PROCHAINES ÉTAPES
+
+1. Lire: gui/DÉMARRAGE.md
+2. Choisir: SFML, Qt5, ou GTK3
+3. Installer: sudo apt-get install libsfml-dev (recommandé)
+4. Créer: gui/src/gui_window_sfml.cpp (implémentation)
+5. Compiler: g++ ... -lsfml-graphics -lsfml-window -lsfml-system
+6. Tester: ./gui_app
+7. Intégrer: Lier à l'application principale
+
+═══════════════════════════════════════════════════════════════════════
+
+Dernière mise à jour: 17 Avril 2026
+État: 🚧 Prêt à développer
