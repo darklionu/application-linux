@@ -8,8 +8,8 @@ echo "╚═══════════════════════�
 echo ""
 
 # Vérifier le binaire
-if [ ! -f "agent_manager" ]; then
-    echo "[!] Erreur: agent_manager non compilé!"
+if [ ! -f "agent_manager_app" ]; then
+    echo "[!] Erreur: agent_manager_app non compilé!"
     echo "[*] Exécutez: make"
     exit 1
 fi
@@ -26,4 +26,4 @@ echo "Démarrage du programme..."
 echo "══════════════════════════════════════════════════════"
 echo ""
 
-./agent_manager
+./agent_manager_app

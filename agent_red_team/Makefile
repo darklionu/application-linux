@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -O2
+CFLAGS = -Wall -Wextra -std=c99 -O2 -I.
 LDFLAGS = -lm
 
-TARGET = agent_manager
-SRCS = manager.c agent_core.c tool_loader.c
+TARGET = agent_manager_app
+SRCS = ui_menu.c agent_engine.c tool_manager.c
 OBJS = $(SRCS:.c=.o)
-HEADERS = agent.h
+HEADERS = agent_types.h
 
 all: $(TARGET)
 

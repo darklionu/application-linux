@@ -1,4 +1,4 @@
-#include "agent.h"
+#include "agent_types.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

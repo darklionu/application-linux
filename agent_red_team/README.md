@@ -30,10 +30,10 @@ Le **Agent Manager** est un contrôleur d'outils pour une red team. Il détecte 
 
 ```
 agent_manager/
-├── agent.h          # En-têtes et structures
-├── agent_core.c     # Logique de l'agent
-├── tool_loader.c    # Gestion des techniques et outils
-├── manager.c        # Interface utilisateur et menu
+├── agent_types.h    # En-têtes et structures
+├── agent_engine.c   # Logique de l'agent
+├── tool_manager.c   # Gestion des techniques et outils
+├── ui_menu.c        # Interface utilisateur et menu
 ├── Makefile         # Configuration de compilation
 └── README.md        # Documentation
 ```

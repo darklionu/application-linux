@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "agent.h"
+#include "agent_types.h"
 
 extern Technique all_techniques[];
 extern int       techniques_count;

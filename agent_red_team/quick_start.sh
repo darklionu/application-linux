@@ -21,8 +21,8 @@ cat << 'EOF'
    $ make rebuild            # Nettoie + recompile
 
 3. Exécuter:
-   $ ./agent_manager      # Lancement manuel
-   $ ./demo.sh           # Démonstration interactive
+   $ ./agent_manager_app      # Lancement manuel
+   $ ./demo_run.sh           # Démonstration interactive
 
 
 🎮 UTILISATION
@@ -83,10 +83,10 @@ Outils:    [X] = activé, [ ] = désactivé
 🔧 STRUCTURE DU PROJET
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-agent.h:        Structures et constantes
-agent_core.c:   Logique de l'agent
-tool_loader.c:  Gestion des techniques et outils
-manager.c:      Interface utilisateur
+agent_types.h:   Structures et constantes
+agent_engine.c:  Logique de l'agent
+tool_manager.c:  Gestion des techniques et outils
+ui_menu.c:       Interface utilisateur
 Makefile:       Compilation
 
 Le programme détecte automatiquement:
@@ -124,7 +124,7 @@ R: Changez les entrées dans tool_loader.c
 🎯 EXEMPLE D'UTILISATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-$ ./agent_manager
+$ ./agent_manager_app
 [Affiche le menu]
 > 1          [Voir le statut actuel]
 > 3          [Gérer les outils]
