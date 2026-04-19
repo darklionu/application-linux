@@ -1,0 +1,17 @@
+# Détection de Mains - Dépendances Windows
+# Pour installer: pip install -r requirements_windows.txt
+
+# Capture et traitement vidéo
+opencv-python==4.8.1.78
+
+# Détection de mains IA
+mediapipe==0.10.5
+
+# Calculs numériques
+numpy==1.24.3
+
+# Traitement d'images (optionnel)
+pillow>=9.0.0
+
+# Pour créer des exécutables Windows (optionnel)
+# pyinstaller>=5.0.0
