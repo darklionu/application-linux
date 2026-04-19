@@ -1,6 +1,9 @@
 #include "agent_manager_cpp.h"
 #include <iomanip>
 #include <sstream>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 // ============================================================================
 // Implémentation de la classe Agent
@@ -12,22 +15,49 @@ int Agent::execute() const {
         return 1;
     }
 
-    std::string command = "\"" + path + "\"";
+    // Validation du chemin
+    if (access(path.c_str(), F_OK) != 0) {
+        std::cerr << "[!] Agent introuvable: " << path << std::endl;
+        return 1;
+    }
+    
+    if (access(path.c_str(), X_OK) != 0) {
+        std::cerr << "[!] Agent non exécutable: " << path << std::endl;
+        return 1;
+    }
+
     std::cout << "\n[+] Exécution de l'agent: " << name << std::endl;
     std::cout << "[+] Chemin: " << path << std::endl;
     std::cout << "[+] Type: " << type << std::endl;
     std::cout << std::string(60, '-') << std::endl;
 
-    int result = system(command.c_str());
-
-    if (result == -1) {
-        std::cerr << "[!] Erreur lors de l'exécution de " << name << std::endl;
+    // Utiliser fork/exec au lieu de system pour la sécurité
+    pid_t pid = fork();
+    
+    if (pid == -1) {
+        std::cerr << "[!] Erreur lors du fork de " << name << std::endl;
         return 1;
     }
-
-    std::cout << std::string(60, '-') << std::endl;
-    std::cout << "[✓] Exécution terminée pour " << name << std::endl;
-    return result != 0;
+    
+    if (pid == 0) {
+        // Processus enfant
+        char* const argv[] = {const_cast<char*>(path.c_str()), NULL};
+        execv(path.c_str(), argv);
+        // Si execv retourne, il y a une erreur
+        exit(127);
+    } else {
+        // Processus parent
+        int status;
+        waitpid(pid, &status, 0);
+        
+        int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+        
+        std::cout << std::string(60, '-') << std::endl;
+        std::cout << "[+] Exécution terminée pour " << name 
+                  << " (code: " << exit_code << ")" << std::endl;
+        
+        return exit_code != 0;
+    }
 }
 
 void Agent::printInfo() const {

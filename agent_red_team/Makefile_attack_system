@@ -1,0 +1,86 @@
+# Makefile pour le Système d'Agents Attaquants Amélioré
+# Compile tous les composants avec gestion des dépendances
+
+CC = gcc
+CFLAGS = -Wall -Wextra -O2 -g -std=c99
+LDFLAGS = -lm
+
+# Répertoires
+AGENT_DIR = agent_red_team
+TARGET_DIR = agent
+OUTPUT_DIR = build
+
+# Fichiers sources
+SOURCES = main_attack_system.c tool_manager.c
+HEADERS = physical_target.h agent_manager_secure.h agent_types.h
+
+OBJECTS = $(patsubst %.c,$(OUTPUT_DIR)/%.o,$(SOURCES))
+EXECUTABLE = $(OUTPUT_DIR)/attack_system
+
+# Cibles principales
+.PHONY: all clean compile run test help
+
+all: $(EXECUTABLE)
+
+# Compilation
+$(OUTPUT_DIR):
+	@mkdir -p $(OUTPUT_DIR)
+
+$(OUTPUT_DIR)/%.o: %.c $(HEADERS) | $(OUTPUT_DIR)
+	@echo "[CC] Compilation de $<..."
+	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo "[OK] $@"
+
+$(EXECUTABLE): $(OBJECTS)
+	@echo "[LINK] Création de l'exécutable..."
+	@$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	@echo "[OK] Exécutable créé: $@"
+	@chmod +x $@
+
+# Tests
+test: $(EXECUTABLE)
+	@echo "[TEST] Exécution des tests..."
+	@echo "Tests non interactifs à configurer"
+
+# Exécution
+run: $(EXECUTABLE)
+	@echo "[RUN] Démarrage du système d'agents attaquants..."
+	@$(EXECUTABLE)
+
+run-verbose: $(EXECUTABLE)
+	@echo "[RUN] Démarrage en mode verbeux..."
+	@$(EXECUTABLE) -v
+
+# Nettoyage
+clean:
+	@echo "[CLEAN] Suppression des fichiers compilés..."
+	@rm -rf $(OUTPUT_DIR)
+	@echo "[OK] Nettoyé"
+
+# Analyse
+analyze:
+	@echo "[ANALYZE] Vérification de la sécurité..."
+	@cppcheck --enable=all $(AGENT_DIR)/*.c $(AGENT_DIR)/*.h 2>/dev/null || echo "cppcheck non disponible"
+	@echo "[ANALYZE] Vérification complète"
+
+# Aide
+help:
+	@echo "╔════════════════════════════════════════════╗"
+	@echo "║   Système d'Agents Attaquants - Makefile ║"
+	@echo "╚════════════════════════════════════════════╝"
+	@echo ""
+	@echo "Cibles disponibles:"
+	@echo "  make all          - Compiler tout"
+	@echo "  make clean        - Nettoyer les fichiers compilés"
+	@echo "  make run          - Exécuter le système"
+	@echo "  make run-verbose  - Exécuter en mode verbeux"
+	@echo "  make test         - Exécuter les tests automatiques"
+	@echo "  make analyze      - Analyse de sécurité"
+	@echo "  make help         - Afficher cette aide"
+	@echo ""
+	@echo "Exemple d'utilisation:"
+	@echo "  make clean && make all && make run"
+	@echo ""
+
+# Cibles par défaut
+.DEFAULT_GOAL := help

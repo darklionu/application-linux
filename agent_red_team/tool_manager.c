@@ -27,16 +27,24 @@ int load_tools(Agent *a, const char *tools_dir) {
         // Ignorer les liens symboliques cassés
         if (strcmp(entry->d_name, "..") == 0) continue;
         
+        // Vérifier la longueur du nom
+        if (strlen(entry->d_name) >= NAME_LEN) {
+            fprintf(stderr, "[!] Nom d'outil trop long, ignoré\n");
+            continue;
+        }
+        
         Tool *t = &a->tools[a->tools_count];
         strncpy(t->name, entry->d_name, NAME_LEN - 1);
+        t->name[NAME_LEN - 1] = '\0';  // Assurer la null-termination
         snprintf(t->path, PATH_LEN, "%s/%s", tools_dir, entry->d_name);
+        t->path[PATH_LEN - 1] = '\0';  // Assurer la null-termination
         t->phase = (a->tools_count % 5);
         t->enabled = 0;
         a->tools_count++;
     }
 
     closedir(dir);
-    printf("[*] %d outils detéctés\n", a->tools_count);
+    printf("[*] %d outil(s) detecté(s)\n", a->tools_count);
     return a->tools_count;
 }
 
