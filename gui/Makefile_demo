@@ -1,0 +1,57 @@
+# ============================================================================
+# Makefile pour JARVIS Interactive Demo - Version avec Exécution RÉELLE
+# ============================================================================
+
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -pthread
+INCLUDE = -I./include
+TARGET = jarvis_interactive_demo
+SRC_DIR = src
+OBJ_DIR = build
+SOURCES = $(SRC_DIR)/main_interactive_demo.cpp
+OBJECTS = $(OBJ_DIR)/main_interactive_demo.o
+
+# Cibles par défaut
+.PHONY: all run debug clean help
+
+all: $(TARGET)
+	@echo "✓ Exécutable créé: $(TARGET)"
+	@echo "✓ Compilation réussie! Exécutez avec: make run"
+
+$(TARGET): $(OBJECTS)
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -o $@ $^
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+
+run: $(TARGET)
+	./$(TARGET)
+
+debug: CXXFLAGS += -g -O0
+debug: clean $(TARGET)
+	gdb ./$(TARGET)
+
+clean:
+	@rm -rf $(OBJ_DIR) $(TARGET)
+	@echo "✓ Nettoyage effectué"
+
+help:
+	@echo "Cibles disponibles:"
+	@echo "  make all       - Compiler (version démo avec test_agent.sh)"
+	@echo "  make run       - Compiler et exécuter"
+	@echo "  make debug     - Compiler en mode debug"
+	@echo "  make clean     - Nettoyer les fichiers compilés"
+	@echo "  make help      - Afficher cette aide"
+	@echo ""
+	@echo "📝 Mode Démonstration:"
+	@echo "  Les agents utilisent './test_agent.sh' pour la démonstration"
+	@echo "  Cela vous permet de tester l'exécution RÉELLE"
+	@echo ""
+	@echo "🎯 Essayez:"
+	@echo "  1. select Agent de Test 1"
+	@echo "  2. select Agent de Test 2"
+	@echo "  3. validate"
+	@echo "  4. execute"
+	@echo "  5. Tapez 'y' pour confirmer"

@@ -1,0 +1,40 @@
+# Makefile pour le système de sélection d'agents amélioré
+
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
+TARGET = agent_selection_example
+SRC = src/agent_selection_example.cpp
+OBJ = $(SRC:.cpp=.o)
+
+.PHONY: all clean run help
+
+all: $(TARGET)
+	@echo "✓ Compilation réussie! Exécutez avec: make run"
+
+$(TARGET): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+	@echo "✓ Exécutable créé: $(TARGET)"
+
+src/agent_selection_example.o: src/agent_selection_example.cpp include/agent_selection_system.h include/agent_selection_interface.h
+	$(CXX) $(CXXFLAGS) -c src/agent_selection_example.cpp -o $@
+
+run: $(TARGET)
+	./$(TARGET)
+
+debug: CXXFLAGS += -g -DDEBUG
+debug: clean $(TARGET)
+	@echo "✓ Mode debug activé"
+
+clean:
+	rm -f $(OBJ) $(TARGET)
+	@echo "✓ Nettoyage effectué"
+
+help:
+	@echo "Commandes disponibles:"
+	@echo "  make           - Compile le projet"
+	@echo "  make run       - Compile et exécute"
+	@echo "  make debug     - Compile en mode debug"
+	@echo "  make clean     - Supprime les fichiers compilés"
+	@echo "  make help      - Affiche cette aide"
+
+.SILENT: help

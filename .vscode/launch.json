@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "extension-output-ms-vscode.cpptools-#3-Avertissements de configuration C",
-      "program": "extension-output-ms-vscode.cpptools-#3-Avertissements de configuration C/build/Debug/outDebug",
+      "cwd": "/workspaces/application-linux/agent _blue_team",
+      "program": "/workspaces/application-linux/agent _blue_team/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
