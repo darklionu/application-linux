@@ -245,7 +245,11 @@ void interactive_menu(SecureAgentManager* mgr) {
                 }
                 printf("Choisir une cible (numéro): ");
                 int target_idx;
-                scanf("%d", &target_idx);
+                if (scanf("%d", &target_idx) != 1) {
+                    fprintf(stderr, "[!] Entrée invalide\n");
+                    while (getchar() != '\n');
+                    break;
+                }
                 getchar();
                 
                 if (target_idx > 0 && target_idx <= mgr->attack_system->targets_count) {
@@ -253,7 +257,11 @@ void interactive_menu(SecureAgentManager* mgr) {
                     printf("Type d'attaque:\n");
                     printf("  1. Scan\n  2. Exploit\n  3. Malware\n  4. DoS\n");
                     int attack;
-                    scanf("%d", &attack);
+                    if (scanf("%d", &attack) != 1) {
+                        fprintf(stderr, "[!] Entrée invalide\n");
+                        while (getchar() != '\n');
+                        break;
+                    }
                     getchar();
                     
                     AttackType types[] = {0, ATTACK_SCAN, ATTACK_EXPLOIT, ATTACK_MALWARE, ATTACK_DOS};
@@ -274,7 +282,11 @@ void interactive_menu(SecureAgentManager* mgr) {
                 }
                 printf("Choisir une cible (numéro): ");
                 int target_idx;
-                scanf("%d", &target_idx);
+                if (scanf("%d", &target_idx) != 1) {
+                    fprintf(stderr, "[!] Entrée invalide\n");
+                    while (getchar() != '\n');
+                    break;
+                }
                 getchar();
                 
                 if (target_idx > 0 && target_idx <= mgr->attack_system->targets_count) {

@@ -129,10 +129,10 @@ void AgentManager::displayAgents() {
     std::cout << std::string(70, '-') << std::endl;
     std::cout << std::left << std::setw(25) << "Nom"
               << std::setw(15) << "Type"
-              << std::setw(10) << "État" << std::endl;
+              << std::setw(10) << "Etat" << std::endl;
     std::cout << std::string(70, '-') << std::endl;
 
-    for (int i = 0; i < agents.size(); ++i) {
+    for (int i = 0; i < (int)agents.size(); ++i) {
         std::cout << std::setw(2) << (i + 1) << ". ";
         agents[i].printInfo();
     }
@@ -140,7 +140,7 @@ void AgentManager::displayAgents() {
 }
 
 void AgentManager::executeAgent(int index) {
-    if (index < 0 || index >= agents.size()) {
+    if (index < 0 || index >= (int)agents.size()) {
         std::cerr << "[!] Index d'agent invalide" << std::endl;
         return;
     }
@@ -157,7 +157,7 @@ void AgentManager::executeMultipleAgents(const std::vector<int>& indices) {
 void AgentManager::executeAllAgents() {
     std::cout << "\n[*] Exécution de tous les agents..." << std::endl;
     std::vector<int> allIndices;
-    for (int i = 0; i < agents.size(); ++i) {
+    for (int i = 0; i < (int)agents.size(); ++i) {
         allIndices.push_back(i);
     }
     executeMultipleAgents(allIndices);
@@ -166,7 +166,7 @@ void AgentManager::executeAllAgents() {
 int AgentManager::selectAgent() {
     int choice;
     std::cout << "Entrez le numéro de l'agent (1-" << agents.size() << ", 0 pour annuler): ";
-    if (!(std::cin >> choice) || choice < 0 || choice > agents.size()) {
+    if (!(std::cin >> choice) || choice < 0 || choice > (int)agents.size()) {
         std::cin.clear();
         std::cin.ignore(10000, '\n');
         return -1;

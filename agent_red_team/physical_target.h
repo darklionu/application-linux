@@ -201,8 +201,6 @@ void scan_ports(PhysicalTarget* target) {
     
     // SCAN RÉEL: Utiliser la vraie fonction de scan
     // Les ports sont maintenant scannés réellement via connexions TCP
-    PortScanResult results[MAX_PORTS];
-    int results_count = 0;
     
     // Ports préférés à scanner en priorité (pour plus de vitesse)
     int preferred_ports[] = {
@@ -508,7 +506,7 @@ void print_attack_history(const AttackSystem* sys) {
     printf("╠═══════════════════════════════════════════════════╣\n");
     
     for (int i = 0; i < sys->attacks_count && i < 10; i++) {
-        AttackLog* log = &sys->attack_history[i];
+        const AttackLog* log = &sys->attack_history[i];
         printf("║ [%s] %s - %s                        ║\n",
                log->success ? "OK" : "KO",
                log->target_name,

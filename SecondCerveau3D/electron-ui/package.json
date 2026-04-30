@@ -1,0 +1,28 @@
+{
+  "name": "secondcerveau3d-ui",
+  "version": "1.0.0",
+  "description": "SecondCerveau3D - 3D Agent Orchestration Interface",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "test": "jest"
+  },
+  "dependencies": {
+    "electron": "^latest",
+    "three": "^r150",
+    "ws": "^8.13.0",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-react": "^7.22.0",
+    "babel-loader": "^9.1.0",
+    "webpack": "^5.88.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "author": "SecondCerveau",
+  "license": "MIT"
+}
